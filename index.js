@@ -2,156 +2,160 @@
  * @typedef {(a: number, b: number) => number} PriorityFn
  */
 
-/**
- *
- * @param {number[]} heap
- * @param {PriorityFn} priority_fn
- * @param {number} item
- */
-function enqueue(heap, priority_fn, item) {
-  heap.push(item) - 1;
-  let current_index = heap.length - 1;
+class PriorityQueue {
+  /**@type {number[]} */
+  heap = [];
+  heap_last_index = -1;
 
-  // re-structure heap after insertion
-  while (current_index > 0) {
-    let parent_index = get_parent_index(current_index);
+  /**@type {PriorityFn} */
+  priority_fn;
 
-    const swapped = heap_priority_swap(
-      heap,
-      priority_fn,
-      parent_index,
-      current_index
-    );
-
-    // stop loop if parent node not is priority above current node
-    if (!swapped) {
-      break;
+  /**
+   *
+   * @param {PriorityFn} priority_fn
+   */
+  constructor(priority_fn) {
+    if (typeof priority_fn !== "function") {
+      throw new TypeError(`new PriorityQueue(...) 1# arg expects a function`);
     }
 
-    current_index = parent_index;
+    this.priority_fn = priority_fn;
+  }
+
+  /**
+   *
+   * @param {number} item
+   */
+  enqueue(item) {
+    this._heap_push(item);
+    let current_index = this.heap_last_index;
+
+    while (current_index > 0) {
+      const parent_index = get_heap_parent_index(current_index);
+
+      const swapped = this.priority_swap(parent_index, current_index);
+      // if cant swap end the loop
+      if (!swapped) {
+        break;
+      }
+
+      current_index = parent_index;
+    }
+  }
+
+  /**
+   *
+   * @returns {number | undefined}
+   */
+  dequeue() {
+    this.swap(0, this.heap_last_index);
+
+    const dequeue_result = this._heap_pop();
+
+    let parent_index = 0;
+
+    while (true) {
+      const child_index = this.get_priority_child_index(parent_index);
+      if (child_index === -1) {
+        break;
+      }
+
+      const swapped = this.priority_swap(parent_index, child_index);
+      if (!swapped) {
+        break;
+      }
+
+      parent_index = child_index;
+    }
+
+    return dequeue_result;
+  }
+
+  /**
+   *
+   * @returns {number | undefined}
+   */
+  peek() {
+    return this.heap[0];
+  }
+
+  priority_swap(parent_index, child_index) {
+    if (this.priority_diff(parent_index, child_index) < 0) {
+      return false;
+    }
+
+    this.swap(parent_index, child_index);
+
+    return true;
+  }
+
+  /**
+   *
+   * @param {number} a_index
+   * @param {number} b_index
+   * @returns {number} `number` result < 0 if a priority is higher, result > 0 if b priority is higher and result == 0 if a & b have same priority
+   */
+  priority_diff(a_index, b_index) {
+    return this.priority_fn(this.heap[a_index], this.heap[b_index]);
+  }
+
+  swap(a_index, b_index) {
+    const temp = this.heap[a_index];
+    this.heap[a_index] = this.heap[b_index];
+    this.heap[b_index] = temp;
+  }
+
+  get_priority_child_index(parent_index) {
+    const children_indexes = get_heap_children_index(parent_index);
+
+    if (children_indexes.left > this.heap_last_index) {
+      return -1;
+    }
+
+    if (children_indexes.right > this.heap_last_index) {
+      return children_indexes.left;
+    }
+
+    return this.priority_diff(children_indexes.right, children_indexes.left) < 0
+      ? children_indexes.right
+      : children_indexes.left;
+  }
+
+  _heap_push(item) {
+    this.heap_last_index += 1;
+
+    return this.heap.push(item);
+  }
+
+  _heap_pop() {
+    if (this.heap_last_index >= 0) {
+      this.heap_last_index -= 1;
+    }
+
+    return this.heap.pop();
   }
 }
 
 /**
  *
- * @param {number[]} heap
- * @param {PriorityFn} priority_fn
- * @returns {number | undefined}
- */
-function dequeue(heap, priority_fn) {
-  let last_index = heap.length - 1;
-
-  // get peek element, place last element in peek position
-  // and remove last position
-  let front_item = heap[0];
-  heap[0] = heap[last_index];
-  heap.pop();
-
-  // updates last index
-  last_index -= 1;
-
-  // sets parent index to peek position
-  let parent_index = 0;
-
-  // re-structure heap after deletion
-  while (true) {
-    const child_index = get_priority_child_index(
-      heap,
-      priority_fn,
-      parent_index
-    );
-
-    if (child_index === -1) {
-      break;
-    }
-
-    const swapped = heap_priority_swap(
-      heap,
-      priority_fn,
-      parent_index,
-      child_index
-    );
-    if (!swapped) {
-      break;
-    }
-
-    parent_index = child_index;
-  }
-
-  return front_item;
-}
-
-/**
- *
- * @param {number[]} heap
- * @param {PriorityFn} priority_fn
  * @param {number} parent_index
- * @param {number} child_index
- * @returns {boolean} true if swapped, false otherwise
  */
-function heap_priority_swap(heap, priority_fn, parent_index, child_index) {
-  // return false if parent node not is priority above current node
-  if (priority_fn(heap[parent_index], heap[child_index]) < 0) {
-    return false;
-  }
+function get_heap_children_index(parent_index) {
+  const left = parent_index * 2 + 1;
+  const right = left + 1;
 
-  // swap nodes
-  const temp = heap[parent_index];
-  heap[parent_index] = heap[child_index];
-  heap[child_index] = temp;
-
-  return true;
+  return {
+    left,
+    right,
+  };
 }
 
-/**
- *
- * @param {number[]} heap
- * @param {PriorityFn} priority_fn
- * @param {number} right_child_index
- * @param {number} left_child_index
- * @returns {number}
- */
-function get_priority_child_index(heap, priority_fn, parent_index) {
-  const last_index = heap.length - 1;
-
-  let [left_child_index, right_child_index] = get_children_index(parent_index);
-
-  if (left_child_index > last_index) {
-    return -1;
-  }
-
-  const is_right_child_in_boundary = right_child_index <= last_index;
-
-  // change current index to right child index if current child is priority
-  if (
-    is_right_child_in_boundary &&
-    priority_fn(heap[right_child_index], heap[left_child_index]) <= 0
-  ) {
-    return right_child_index;
-  }
-
-  return left_child_index;
-}
-
-function get_children_index(parent_index) {
-  const lci = parent_index * 2 + 1;
-  const rci = lci + 1;
-
-  return [lci, rci];
-}
-
-function get_parent_index(child_index) {
+function get_heap_parent_index(child_index) {
   return Math.floor((child_index - 1) / 2);
 }
 
-function peek(heap) {
-  return heap[0];
-}
-
 const priority_queue = {
-  enqueue,
-  dequeue,
-  peek,
+  PriorityQueue,
 };
 
 module.exports = priority_queue;
