@@ -2,10 +2,22 @@
  * @typedef {(a: number, b: number) => number} PriorityFn
  */
 
+const HEAP_PEEK_INDEX = 0;
+
 class PriorityQueue {
-  /**@type {number[]} */
-  heap = [];
-  heap_last_index = -1;
+  /**
+   * The heap is a array where all the values will be stored
+   *
+   * @type {number[]}
+   * @private
+   */
+  _heap = [];
+
+  /**
+   *
+   * @private
+   */
+  _heap_last_index = -1;
 
   /**@type {PriorityFn} */
   priority_fn;
@@ -27,8 +39,11 @@ class PriorityQueue {
    * @param {number} item
    */
   enqueue(item) {
+    // add new item
     this._heap_push(item);
-    let current_index = this.heap_last_index;
+
+    // sets current_index to last heap index
+    let current_index = this._heap_last_index;
 
     // re-structure heap
     while (current_index > 0) {
@@ -59,11 +74,16 @@ class PriorityQueue {
    * @returns {number | undefined}
    */
   dequeue() {
-    this.swap(0, this.heap_last_index);
+    const peek_value = this.peek();
 
-    const dequeue_result = this._heap_pop();
+    // swap peak and last heap items
+    this.swap(HEAP_PEEK_INDEX, this._heap_last_index);
 
-    let parent_index = 0;
+    // pops the old peek item
+    this._heap_pop();
+
+    // sets parent_index to heap peek index
+    let parent_index = HEAP_PEEK_INDEX;
 
     // re-structure heap
     while (true) {
@@ -82,7 +102,7 @@ class PriorityQueue {
       parent_index = child_index;
     }
 
-    return dequeue_result;
+    return peek_value;
   }
 
   /**
@@ -90,9 +110,16 @@ class PriorityQueue {
    * @returns {number | undefined}
    */
   peek() {
-    return this.heap[0];
+    return this._heap[HEAP_PEEK_INDEX];
   }
 
+  /**
+   * Swap `parent` with `child` if `parent` priority is lower than its `child`.
+   *
+   * @param {number} parent_index
+   * @param {number} child_index
+   * @returns `true` if swapped, `false` if not swapped.
+   */
   priority_swap(parent_index, child_index) {
     if (this.priority_diff(parent_index, child_index) < 0) {
       return false;
@@ -104,29 +131,30 @@ class PriorityQueue {
   }
 
   /**
+   * Executes `this.priority_fn` with heap values at `a_index` and `b_index`
    *
-   * @param {number} a_index
-   * @param {number} b_index
-   * @returns {number} `number` result < 0 if a priority is higher, result > 0 if b priority is higher and result == 0 if a & b have same priority
+   * @param {number} a_index index of `a` value
+   * @param {number} b_index index of `b` value
+   * @returns {number} `number` result < 0 if `a` priority is higher, result > 0 if `b` priority is higher and result == 0 if `a` & `b` have same priority
    */
   priority_diff(a_index, b_index) {
-    return this.priority_fn(this.heap[a_index], this.heap[b_index]);
+    return this.priority_fn(this._heap[a_index], this._heap[b_index]);
   }
 
   swap(a_index, b_index) {
-    const temp = this.heap[a_index];
-    this.heap[a_index] = this.heap[b_index];
-    this.heap[b_index] = temp;
+    const temp = this._heap[a_index];
+    this._heap[a_index] = this._heap[b_index];
+    this._heap[b_index] = temp;
   }
 
   get_priority_child_index(parent_index) {
     const children_indexes = get_heap_children_index(parent_index);
 
-    if (children_indexes.left > this.heap_last_index) {
+    if (children_indexes.left > this._heap_last_index) {
       return -1;
     }
 
-    if (children_indexes.right > this.heap_last_index) {
+    if (children_indexes.right > this._heap_last_index) {
       return children_indexes.left;
     }
 
@@ -135,18 +163,26 @@ class PriorityQueue {
       : children_indexes.left;
   }
 
+  /**
+   *
+   * @private
+   */
   _heap_push(item) {
-    this.heap_last_index += 1;
+    this._heap_last_index += 1;
 
-    return this.heap.push(item);
+    return this._heap.push(item);
   }
 
+  /**
+   *
+   * @private
+   */
   _heap_pop() {
-    if (this.heap_last_index >= 0) {
-      this.heap_last_index -= 1;
+    if (this._heap_last_index >= 0) {
+      this._heap_last_index -= 1;
     }
 
-    return this.heap.pop();
+    return this._heap.pop();
   }
 }
 
