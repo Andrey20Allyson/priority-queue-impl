@@ -30,6 +30,7 @@ class PriorityQueue {
     this._heap_push(item);
     let current_index = this.heap_last_index;
 
+    // re-structure heap
     while (current_index > 0) {
       const parent_index = get_heap_parent_index(current_index);
 
@@ -45,6 +46,16 @@ class PriorityQueue {
 
   /**
    *
+   * @param {number} items
+   */
+  enqueue_array(items) {
+    for (const item of items) {
+      this.enqueue(item);
+    }
+  }
+
+  /**
+   *
    * @returns {number | undefined}
    */
   dequeue() {
@@ -54,13 +65,16 @@ class PriorityQueue {
 
     let parent_index = 0;
 
+    // re-structure heap
     while (true) {
       const child_index = this.get_priority_child_index(parent_index);
+      // if parent dont have at least one child end the loop
       if (child_index === -1) {
         break;
       }
 
       const swapped = this.priority_swap(parent_index, child_index);
+      // if cant swap end the loop
       if (!swapped) {
         break;
       }
